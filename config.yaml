@@ -7,7 +7,3 @@ basic_auth:
       password: nvjnsoejcnsoeknwnefowen
     - username: sang
       password: 123456
-
-pagination:
-  page_size: 10
-  page_number: 1
