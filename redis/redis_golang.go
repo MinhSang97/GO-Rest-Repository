@@ -3,15 +3,16 @@ package redis
 import (
 	"context"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"log"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var RedisClient *redis.Client
 
 func ConnectRedis() *redis.Client {
 	RedisClient = redis.NewClient(&redis.Options{
-		Addr:     "172.17.0.2:6379",
+		Addr:     "localhost:6379",
 		Password: "",
 		DB:       0,
 	})
@@ -23,4 +24,5 @@ func ConnectRedis() *redis.Client {
 	}
 	fmt.Println("Connected to Redis:", pong)
 	return RedisClient
+
 }

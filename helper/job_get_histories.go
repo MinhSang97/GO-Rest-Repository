@@ -2,75 +2,111 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"io/ioutil"
+	"log"
 	"net/http"
-	"time"
 )
 
 type OHLCData struct {
+	ID        string  `json:"id"`
 	Timestamp int64   `json:"timestamp"`
 	Open      float64 `json:"open"`
 	High      float64 `json:"high"`
 	Low       float64 `json:"low"`
 	Close     float64 `json:"close"`
-	Change    float64
+	Change    float64 // Change percentage
 }
 
+var instance *gorm.DB
+
 func main() {
-	// Gọi API
-	resp, err := http.Get("https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=1&precision=1")
+	dsn := "host=localhost user=admin password=123456 dbname=golang port=5432 sslmode=disable"
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		fmt.Println("Error fetching data:", err)
-		return
+		log.Fatal(err)
+	}
+	instance = db
+	log.Println("Connected to the database")
+
+	// Fetch data from API
+	data, err := fetchData()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Calculate change percentage
+	calculateChange(&data)
+
+	// Save data to database
+	err = saveData(&data)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Data saved successfully")
+}
+
+func fetchData() ([]OHLCData, error) {
+	url := "https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=1&precision=1"
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	// Đọc dữ liệu trả về
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response:", err)
-		return
+		return nil, err
 	}
 
-	// Phân tích dữ liệu JSON
-	var ohlcData [][]interface{}
-	err = json.Unmarshal(body, &ohlcData)
+	var data [][]interface{}
+	err = json.Unmarshal(body, &data)
 	if err != nil {
-		fmt.Println("Error decoding JSON:", err)
-		return
+		return nil, err
 	}
 
-	// Tạo slice để lưu trữ dữ liệu OHLC
-	var ohlcList []OHLCData
-
-	// Tính toán change và lưu dữ liệu vào slice
-	for i := range ohlcData {
-		if i == 0 {
-			continue // Bỏ qua mảng đầu tiên vì đây là tiêu đề
-		}
+	var ohlcData []OHLCData
+	for _, d := range data {
 		ohlc := OHLCData{
-			Timestamp: int64(ohlcData[i][0].(float64)),
-			Open:      ohlcData[i][1].(float64),
-			High:      ohlcData[i][2].(float64),
-			Low:       ohlcData[i][3].(float64),
-			Close:     ohlcData[i][4].(float64),
+			ID:        "bitcoin",
+			Timestamp: int64(d[0].(float64) / 1000), // Convert milliseconds to seconds
+			Open:      d[1].(float64),
+			High:      d[2].(float64),
+			Low:       d[3].(float64),
+			Close:     d[4].(float64),
 		}
+		ohlcData = append(ohlcData, ohlc)
+	}
+	return ohlcData, nil
+}
 
-		// Tính toán change
-		if len(ohlcList) > 0 {
-			ohlc.Change = (ohlc.Close - ohlcList[len(ohlcList)-1].Close) / ohlcList[len(ohlcList)-1].Close * 100
+func calculateChange(data *[]OHLCData) {
+	for i := range *data {
+		if i > 0 {
+			previousClose := (*data)[i-1].Close
+			(*data)[i].Change = (((*data)[i].Close - previousClose) / previousClose) * 100
 		} else {
-			ohlc.Change = 0
+			(*data)[i].Change = 0
 		}
-
-		ohlcList = append(ohlcList, ohlc)
 	}
+}
 
-	// In dữ liệu đã phân tích
-	for _, data := range ohlcList {
-		// Chuyển đổi timestamp sang thời gian bình thường
-		t := time.Unix(data.Timestamp/1000, 0).UTC()
-		fmt.Printf("Timestamp: %s, Open: %.2f, High: %.2f, Low: %.2f, Close: %.2f, Change: %.2f%%\n", t.Format("02 January 2006 15:04:05"), data.Open, data.High, data.Low, data.Close, data.Change)
+func saveData(data *[]OHLCData) error {
+	for _, d := range *data {
+		// Check if the record already exists
+		var count int64
+		instance.Model(&OHLCData{}).Where("id = ? AND timestamp = ?", d.ID, d.Timestamp).Count(&count)
+		if count == 0 {
+			// If the record does not exist, create a new one
+			result := instance.Create(&d)
+			if result.Error != nil {
+				return result.Error
+			}
+		} else {
+			// If the record exists, skip
+			log.Printf("Record with id '%s' and timestamp '%d' already exists. Skipping...", d.ID, d.Timestamp)
+		}
 	}
+	return nil
 }

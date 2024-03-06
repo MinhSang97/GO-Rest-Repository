@@ -7,7 +7,7 @@ import (
 
 func main() {
 
-	framework.Route()
 	redis.ConnectRedis()
+	framework.Route()
 
 }

@@ -2,78 +2,84 @@ package postgresSQL
 
 import (
 	"app/model"
-	"app/redis"
 	"app/repo"
 	"context"
-	"encoding/json"
 	"fmt"
-
-	"log"
-
 	"gorm.io/gorm"
+	"log"
 )
 
-type studentRepository struct {
+type ohldDataRepository struct {
 	db *gorm.DB
 }
 
-func (s studentRepository) GetOneByID(ctx context.Context, StartTime, EndTime, Period, Symbol string) (model.Student, error) {
-	var student model.Student
-	RedisClient := redis.ConnectRedis()
+// Chuyển startDate và endDate thành startTime và endTime, và chỉ trả về một bản ghi OHLCData
+//func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, endDate int64, period, symbol string) (model.OHLCData, error) {
+//	var ohldData model.OHLCData
+//
+//	// Nếu không tìm thấy trong Redis, thực hiện truy vấn vào PostgreSQL
+//	// Sử dụng câu lệnh SQL tương ứng với yêu cầu
+//	rows, err := s.db.Raw("SELECT o.timestamp, o.high, o.low, o.open, o.close, o.change FROM coins c RIGHT JOIN ohlc_data o ON c.id = o.id WHERE c.symbol = ? AND o.timestamp >= ? AND o.timestamp <= ?", symbol, startDate, endDate).Rows()
+//	if err != nil {
+//		log.Println("Failed to execute SQL query:", err)
+//		return ohldData, fmt.Errorf("Failed to execute SQL query: %w", err)
+//	}
+//	defer rows.Close()
+//
+//	// Xử lý kết quả từ PostgreSQL
+//	for rows.Next() {
+//		var timestamp int64
+//		var high, low, open, close, change float64
+//		rows.Scan(&timestamp, &high, &low, &open, &close, &change)
+//		ohldData = model.OHLCData{Timestamp: timestamp, High: high, Low: low, Open: open, Close: close, Change: change}
+//	}
+//
+//	if ohldData.Open == 0 {
+//		log.Println("Data not found in PostgreSQL")
+//		return ohldData, fmt.Errorf("Data not found in PostgreSQL")
+//	}
+//
+//	log.Println("Data query from PostgreSQL")
+//
+//	return ohldData, nil
+//}
 
-	// Đọc sinh viên từ Redis (nếu có)
-	cachedStudentJSON, err := RedisClient.Get(ctx, fmt.Sprintf("student:%s", StartTime)).Result()
-	if err == nil {
-		var cachedStudent model.Student
-		err := json.Unmarshal([]byte(cachedStudentJSON), &cachedStudent)
-		if err != nil {
-			log.Println("Failed to unmarshal student from Redis:", err)
-			return student, fmt.Errorf("Failed to unmarshal student from Redis: %w", err)
-		}
-		log.Println("Student fetched from Redis")
-		// Handle the response here, e.g., log or return a success message
-		return cachedStudent, nil
-	}
+func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, endDate int64, period, symbol string) ([]model.OHLCData, error) {
+	var ohldData []model.OHLCData
 
-	// Nếu không tìm thấy trong Redis, đọc từ cơ sở dữ liệu MySQL
-	result := s.db.First(&student, StartTime)
-	if result.Error != nil {
-		log.Println("Failed to fetch student from MySQL:", result.Error)
-		return student, fmt.Errorf("Failed to fetch student from MySQL: %w", result.Error)
-	}
-
-	if student.ID == 0 {
-		log.Println("Student not found in MySQL")
-		// Handle the response here, e.g., log or return a not found message
-		return student, fmt.Errorf("Student not found in MySQL")
-	}
-
-	log.Println("Student query from MySQL")
-
-	// Cache thông tin sinh viên vào Redis
-	jsonStudent, err := json.Marshal(student)
+	// Nếu không tìm thấy trong Redis, thực hiện truy vấn vào PostgreSQL
+	// Sử dụng câu lệnh SQL tương ứng với yêu cầu
+	rows, err := s.db.Raw("SELECT o.timestamp, o.high, o.low, o.open, o.close, o.change FROM coins c RIGHT JOIN ohlc_data o ON c.id = o.id WHERE c.symbol = ? AND o.timestamp >= ? AND o.timestamp <= ?", symbol, startDate, endDate).Rows()
 	if err != nil {
-		log.Println("Failed to marshal student:", err)
-		return student, fmt.Errorf("Failed to marshal student: %w", err)
+		log.Println("Failed to execute SQL query:", err)
+		return ohldData, fmt.Errorf("Failed to execute SQL query: %w", err)
+	}
+	defer rows.Close()
+
+	// Xử lý kết quả từ PostgreSQL
+	for rows.Next() {
+		var timestamp int64
+		var high, low, open, close, change float64
+		rows.Scan(&timestamp, &high, &low, &open, &close, &change)
+		ohldData = append(ohldData, model.OHLCData{Timestamp: timestamp, High: high, Low: low, Open: open, Close: close, Change: change})
 	}
 
-	key := fmt.Sprintf("student:%s", StartTime)
-	err = redis.RedisClient.Set(ctx, key, jsonStudent, 0).Err()
-	if err != nil {
-		log.Println("Failed to cache student in Redis:", err)
-		// Handle the response here, e.g., log or return an error message
+	if len(ohldData) == 0 {
+		log.Println("Data not found in PostgreSQL")
+		return ohldData, fmt.Errorf("Data not found in PostgreSQL")
 	}
 
-	// Handle the response here, e.g., log or return the student
-	return student, nil
+	log.Println("Data query from PostgreSQL")
+
+	return ohldData, nil
 }
 
-var instance studentRepository
+var instance ohldDataRepository
 
-func NewStudentRepository(db *gorm.DB) repo.StudentRepo {
+// Sửa đổi chữ ký trả về của hàm OhlcDataRepository để phù hợp với repo.HistoriesRepo
+func OhlcDataRepository(db *gorm.DB) repo.HistoriesRepo {
 	if instance.db == nil {
 		instance.db = db
-
 	}
 	return instance
 }

@@ -12,7 +12,7 @@ type OHLCData struct {
 	High      float64 `json:"high"`
 	Low       float64 `json:"low"`
 	Close     float64 `json:"close"`
-	Change    float64
+	Change    float64 `json:"change"`
 }
 
 func (c *OHLCData) TableName() string {
