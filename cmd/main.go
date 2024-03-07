@@ -20,7 +20,7 @@ func main() {
 	}()
 
 	// Chờ cho framework.Route() và redis.ConnectRedis() hoàn thành
-	time.Sleep(2 * time.Second) // Chờ 2 giây, có thể điều chỉnh tùy theo thời gian thực hiện của các hàm
+	time.Sleep(10 * time.Minute) // Chờ 2 giây, có thể điều chỉnh tùy theo thời gian thực hiện của các hàm
 
 	// Gọi hàm ListCoin() một lần khi ứng dụng khởi động
 	helper.ListCoin()

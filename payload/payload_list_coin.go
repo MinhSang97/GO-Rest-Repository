@@ -6,22 +6,22 @@ import (
 	"log"
 )
 
-type Coin struct {
+type Coins struct {
 	ID     string `json:"id"`
 	Symbol string `json:"symbol"`
 	Name   string `json:"name"`
 }
 
-func (c *Coin) ToModel() *model.Coin {
-	coin := &model.Coin{
+func (c *Coins) ToModel() *model.Coins {
+	coins := &model.Coins{
 		ID:     c.ID,
 		Symbol: c.Symbol,
 		Name:   c.Name,
 	}
-	return coin
+	return coins
 }
 
-func (c *Coin) FromJson(a string) {
+func (c *Coins) FromJson(a string) {
 	err := json.Unmarshal([]byte(a), c)
 	if err != nil {
 		log.Fatalln(err)

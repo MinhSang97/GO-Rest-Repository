@@ -4,18 +4,18 @@ import (
 	"app/payload"
 )
 
-type Coin struct {
+type Coins struct {
 	ID     string `json:"id"`
 	Symbol string `json:"symbol"`
 	Name   string `json:"name"`
 }
 
-func (c *Coin) ToPayload() *payload.Coin {
-	coin := &payload.Coin{
+func (c *Coins) ToPayload() *payload.Coins {
+	coins := &payload.Coins{
 		ID:     c.ID,
 		Symbol: c.Symbol,
 		Name:   c.Name,
 	}
 
-	return coin
+	return coins
 }

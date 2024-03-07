@@ -2,8 +2,10 @@ package helper
 
 import (
 	"app/model"
+	"app/payload"
+	"app/usecases"
+	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -14,21 +16,22 @@ func ListCoin() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer response.Body.Close()
 
-	var coins []model.Coin // Đọc dữ liệu từ API
+	var coins []model.Coins // Change to slice of model.Coins
 	if err := json.NewDecoder(response.Body).Decode(&coins); err != nil {
 		log.Fatal(err)
 	}
+	var data = payload.Coins{}
+	coin := data.ToModel()
+	uc := usecases.NewCoinUseCase()
 
-	// In ra dữ liệu JSON
-	for _, coin := range coins {
-		coinJSON, err := json.Marshal(coin)
-		if err != nil {
-			log.Println("Error marshalling JSON:", err)
-			continue
-		}
-		fmt.Println(string(coinJSON))
+	// Trích xuất thông tin từ mỗi đồng coin và chuyển vào hàm InsertCoin
+	err = uc.InsertCoin(context.TODO(), coin)
+
+	if err != nil {
+		log.Println("Error inserting coin:", err)
+
 	}
+
 }

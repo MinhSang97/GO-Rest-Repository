@@ -6,5 +6,5 @@ import (
 )
 
 type InsertCoinUsecase interface {
-	GetHistories(ctx context.Context, id, symbol, name string) ([]model.Coin, error)
+	InsertCoin(ctx context.Context, coins *model.Coins) error
 }

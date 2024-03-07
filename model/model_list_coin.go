@@ -5,17 +5,17 @@ import (
 	"log"
 )
 
-type Coin struct {
+type Coins struct {
 	ID     string `json:"id"`
 	Symbol string `json:"symbol"`
 	Name   string `json:"name"`
 }
 
-func (c *Coin) TableName() string {
-	return "Coin"
+func (c *Coins) TableName() string {
+	return "coins"
 }
 
-func (c *Coin) ToJson() string {
+func (c *Coins) ToJson() string {
 	bs, err := json.Marshal(c)
 	if err != nil {
 		log.Fatalln(err)
@@ -24,7 +24,7 @@ func (c *Coin) ToJson() string {
 	return string(bs)
 }
 
-func (c *Coin) FromJson(a string) {
+func (c *Coins) FromJson(a string) {
 	err := json.Unmarshal([]byte(a), c)
 	if err != nil {
 		log.Fatalln(err)

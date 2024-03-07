@@ -69,35 +69,46 @@ func Get_Histories() func(*gin.Context) {
 		fmt.Println("end before: ", endDate)
 
 		symbol := strings.ToLower(requestGetHistories.Symbol)
-
-		//// Kiểm tra điều kiện về Period
-		//switch requestGetHistories.Period {
-		//case "30M", "1H", "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "10H", "11H", "12H", "13H", "14H", "15H", "16H", "17H", "18H", "19H", "20H", "21H", "22H", "23H", "24H":
-		//	endDate = addTimeForPeriod(endDate, requestGetHistories.Period)
-		//	fmt.Println("end after: ", endDate)
-		//case "2D", "3D", "4D", "5D", "6D", "7D":
-		//	endDate = startDate.AddDate(0, 0, 7)
-		//default:
-		//	c.JSON(http.StatusBadRequest, payload.Response{
-		//		Error: errors.New("Invalid period").Error(),
-		//	})
-		//	return
-		//}
-
 		period := strings.ToUpper(requestGetHistories.Period)
 
-		uc := usecases.NewHistoriesUseCase()
+		// Kiểm tra điều kiện về Period
+		switch requestGetHistories.Period {
+		case "30M", "1H", "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "10H", "11H", "12H", "13H", "14H", "15H", "16H", "17H", "18H", "19H", "20H", "21H", "22H", "23H", "24H":
 
-		data, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
+			uc := usecases.NewHistoriesUseCase()
+
+			data, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"data": data,
+			})
+		case "2D", "3D", "4D", "5D", "6D", "7D":
+
+			uc := usecases.NewHistoriesUseCase()
+
+			data, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"data": data,
+			})
+		default:
+			c.JSON(http.StatusBadRequest, payload.Response{
+				Error: errors.New("Invalid period").Error(),
 			})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"data": data,
-		})
 	}
 }

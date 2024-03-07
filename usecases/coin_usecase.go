@@ -3,13 +3,12 @@ package usecases
 import (
 	"app/dbutil"
 	"app/model"
-	"app/repo"
 	"app/repo/postgresSQL"
 	"context"
 )
 
 type coinUseCase struct {
-	coinRepo repo.CoinRepo
+	coinRepo InsertCoinUsecase
 }
 
 func NewCoinUseCase() *coinUseCase {
@@ -20,6 +19,6 @@ func NewCoinUseCase() *coinUseCase {
 	}
 }
 
-func (uc *coinUseCase) InsertCoin(ctx context.Context, id string, symbol string, name string) ([]model.Coin, error) {
-	return uc.InsertCoin(ctx, id, "", "")
+func (uc *coinUseCase) InsertCoin(ctx context.Context, coins *model.Coins) error {
+	return uc.coinRepo.InsertCoin(ctx, coins)
 }
