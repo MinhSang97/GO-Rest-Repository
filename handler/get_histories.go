@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"app/model"
 	"app/payload"
 	"app/usecases"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -10,26 +12,6 @@ import (
 	"strings"
 	"time"
 )
-
-//// Hàm để tính toán khoảng thời gian dựa trên giá trị của Period
-//func addTimeForPeriod(endDate time.Time, period string) time.Time {
-//	// Tách số và đơn vị từ chuỗi Period
-//	var num int
-//	var unit string
-//	fmt.Sscanf(period, "%d%s", &num, &unit)
-
-//	// Kiểm tra đơn vị thời gian và thêm tương ứng vào endDate
-//	switch unit {
-//	case "M":
-//		return endDate.Add(time.Minute * time.Duration(num))
-//	case "H":
-//		return endDate.Add(time.Hour * time.Duration(num))
-//	case "D":
-//		return endDate.AddDate(0, 0, num)
-//	default:
-//		return endDate
-//	}
-//}
 
 func Get_Histories() func(*gin.Context) {
 	return func(c *gin.Context) {
@@ -66,7 +48,6 @@ func Get_Histories() func(*gin.Context) {
 			})
 			return
 		}
-		fmt.Println("end before: ", endDate)
 
 		symbol := strings.ToLower(requestGetHistories.Symbol)
 		period := strings.ToUpper(requestGetHistories.Period)
@@ -76,8 +57,8 @@ func Get_Histories() func(*gin.Context) {
 		case "30M", "1H", "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "10H", "11H", "12H", "13H", "14H", "15H", "16H", "17H", "18H", "19H", "20H", "21H", "22H", "23H", "24H":
 
 			uc := usecases.NewHistoriesUseCase()
-
-			data, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
+			// Trong hàm GetHistories
+			dataJSON, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": err.Error(),
@@ -85,9 +66,30 @@ func Get_Histories() func(*gin.Context) {
 				return
 			}
 
+			// Chuyển đổi dữ liệu JSON thành slice byte
+			jsonData, err := json.Marshal(dataJSON)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			// Chuyển đổi dữ liệu JSON thành mảng cấu trúc model.OHLCData
+			var ohldData []model.OHLCData
+			err = json.Unmarshal(jsonData, &ohldData)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			// Trả về dữ liệu đã chuyển đổi
 			c.JSON(http.StatusOK, gin.H{
-				"data": data,
+				"data": ohldData,
 			})
+
 		case "2D", "3D", "4D", "5D", "6D", "7D":
 
 			uc := usecases.NewHistoriesUseCase()

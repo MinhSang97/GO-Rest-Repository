@@ -30,7 +30,7 @@ func main() {
 		for {
 			fmt.Println("Calling ListCoin...")
 			helper.ListCoin()
-			time.Sleep(10 * time.Second)
+			time.Sleep(10 * time.Minute)
 		}
 	}()
 

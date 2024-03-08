@@ -3,6 +3,7 @@ package framework
 import (
 	"app/dbutil"
 	"app/handler"
+	"app/middleware"
 	"fmt"
 	"github.com/gin-gonic/gin"
 )
@@ -12,8 +13,8 @@ func Route() {
 	fmt.Println("Connected: ", db)
 
 	r := gin.Default()
-	//r.Use(middleware.ErrorHandler())
-	//r.Use(middleware.BasicAuthMiddleware())
+	r.Use(middleware.ErrorHandler())
+	r.Use(middleware.BasicAuthMiddleware())
 
 	//v1 := r.Group("/v1")
 	//{

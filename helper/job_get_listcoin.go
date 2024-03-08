@@ -11,27 +11,29 @@ import (
 )
 
 func ListCoin() {
-	// Gọi API
+	// Call API
 	response, err := http.Get("https://api.coingecko.com/api/v3/coins/list")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer response.Body.Close()
-
-	var coins []model.Coins // Change to slice of model.Coins
+	var ex []model.Coins
+	var coins = ex
 	if err := json.NewDecoder(response.Body).Decode(&coins); err != nil {
 		log.Fatal(err)
 	}
-	var data = payload.Coins{}
-	coin := data.ToModel()
+
 	uc := usecases.NewCoinUseCase()
 
-	// Trích xuất thông tin từ mỗi đồng coin và chuyển vào hàm InsertCoin
-	err = uc.InsertCoin(context.TODO(), coin)
+	// Iterate over each coin and insert it
 
+	var data = payload.Coins{} // Assuming this is how you convert model.Coins to payload.Coins
+	coinPayload := data.ToModel()
+
+	// Insert coin
+	err = uc.InsertCoin(context.TODO(), coinPayload)
 	if err != nil {
 		log.Println("Error inserting coin:", err)
-
 	}
 
 }

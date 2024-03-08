@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"app/payload"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v2"
@@ -49,6 +50,9 @@ func BasicAuthMiddleware() gin.HandlerFunc {
 		if !ok {
 			c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
 			c.AbortWithStatus(http.StatusUnauthorized)
+			c.JSON(http.StatusUnauthorized, payload.Response{
+				Error: fmt.Errorf("kiểm tra lại user pass").Error(),
+			})
 			return
 		}
 
@@ -64,10 +68,11 @@ func BasicAuthMiddleware() gin.HandlerFunc {
 		if !validUser {
 			c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
 			c.AbortWithStatus(http.StatusUnauthorized)
+			c.JSON(http.StatusUnauthorized, payload.Response{
+				Error: fmt.Errorf("kiểm tra lại user pass").Error(),
+			})
 			return
 		}
-
-		fmt.Println("Authentication successful - ", "User:", user, "Pass:", pass)
 
 		// Call the next handler
 		c.Next()

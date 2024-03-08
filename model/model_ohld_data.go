@@ -6,7 +6,7 @@ import (
 )
 
 type OHLCData struct {
-	//ID           int64     `json:"id"`
+	ID        string  `json:"-"`
 	Timestamp int64   `json:"timestamp"`
 	Open      float64 `json:"open"`
 	High      float64 `json:"high"`
