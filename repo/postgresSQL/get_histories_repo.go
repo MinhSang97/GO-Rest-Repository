@@ -16,7 +16,6 @@ type ohldDataRepository struct {
 func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, endDate int64, period, symbol string) ([]model.OHLCData, error) {
 	var ohldData []model.OHLCData
 
-	// Kiểm tra điều kiện về Period
 	switch period {
 	case "30M", "1H", "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "10H", "11H", "12H", "13H", "14H", "15H", "16H", "17H", "18H", "19H", "20H", "21H", "22H", "23H", "24H":
 		var ohlcData []model.OHLCData
@@ -33,7 +32,6 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 			}
 			defer rows.Close()
 
-			// Xử lý kết quả từ PostgreSQL
 			for rows.Next() {
 				var timestamp int64
 				var high, low, open, close, change float64
@@ -45,11 +43,10 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 				log.Println("Data not found in PostgreSQL")
 				return ohldData, fmt.Errorf("Data not found in PostgreSQL")
 			}
-			// Tính toán các giá trị mới
+
 			var highestPrice, lowestPrice, firstPrice, lastPrice float64
 			var startTime int64
 
-			// Tìm giá trị cao nhất, thấp nhất, giá mở cửa và đóng cửa
 			for i, data := range ohldData {
 				if i == 0 {
 					firstPrice = data.Open
@@ -64,13 +61,11 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 				lastPrice = data.Close
 			}
 
-			// Tính toán phần trăm thay đổi
 			var change float64
 			if len(ohldData) > 1 {
 				change = (lastPrice - ohldData[len(ohldData)-2].Close) / ohldData[len(ohldData)-2].Close * 100
 			}
 
-			// Append the new OHLCData to the slice
 			data := model.OHLCData{
 				Timestamp: startTime,
 				High:      highestPrice,

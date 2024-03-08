@@ -1,34 +1,17 @@
 package helper
 
 import (
+	"app/model"
 	"encoding/json"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"io/ioutil"
 	"log"
 	"net/http"
 )
 
-type OHLCData struct {
-	ID        string  `json:"id"`
-	Timestamp int64   `json:"timestamp"`
-	Open      float64 `json:"open"`
-	High      float64 `json:"high"`
-	Low       float64 `json:"low"`
-	Close     float64 `json:"close"`
-	Change    float64 // Change percentage
-}
-
 var instance *gorm.DB
 
-func main() {
-	dsn := "host=localhost user=admin password=123456 dbname=golang port=5432 sslmode=disable"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	instance = db
-	log.Println("Connected to the database")
+func GetHistories() {
 
 	// Fetch data from API
 	data, err := fetchData()
@@ -47,7 +30,7 @@ func main() {
 	log.Println("Data saved successfully")
 }
 
-func fetchData() ([]OHLCData, error) {
+func fetchData() ([]model.OHLCData, error) {
 	url := "https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=1&precision=1"
 	resp, err := http.Get(url)
 	if err != nil {
@@ -66,9 +49,9 @@ func fetchData() ([]OHLCData, error) {
 		return nil, err
 	}
 
-	var ohlcData []OHLCData
+	var ohlcData []model.OHLCData
 	for _, d := range data {
-		ohlc := OHLCData{
+		ohlc := model.OHLCData{
 			ID:        "bitcoin",
 			Timestamp: int64(d[0].(float64) / 1000), // Convert milliseconds to seconds
 			Open:      d[1].(float64),
@@ -81,7 +64,7 @@ func fetchData() ([]OHLCData, error) {
 	return ohlcData, nil
 }
 
-func calculateChange(data *[]OHLCData) {
+func calculateChange(data *[]model.OHLCData) {
 	for i := range *data {
 		if i > 0 {
 			previousClose := (*data)[i-1].Close
@@ -92,11 +75,11 @@ func calculateChange(data *[]OHLCData) {
 	}
 }
 
-func saveData(data *[]OHLCData) error {
+func saveData(data *[]model.OHLCData) error {
 	for _, d := range *data {
 		// Check if the record already exists
 		var count int64
-		instance.Model(&OHLCData{}).Where("id = ? AND timestamp = ?", d.ID, d.Timestamp).Count(&count)
+		instance.Model(&model.OHLCData{}).Where("id = ? AND timestamp = ?", d.ID, d.Timestamp).Count(&count)
 		if count == 0 {
 			// If the record does not exist, create a new one
 			result := instance.Create(&d)
