@@ -27,5 +27,12 @@ CREATE TABLE ohlc_data (
                            change float NOT NULL,
                            PRIMARY KEY (symbol, timestamp)
 );
+CREATE TABLE coins (
+                           id text NOT NULL,
+                           symbol text NOT NULL,
+                           name text NOT NULL,
+                           PRIMARY KEY (id, symbol)
+
+);
 
 truncate table ohlc_data
