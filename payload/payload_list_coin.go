@@ -12,8 +12,8 @@ type Coins struct {
 	Name   string `json:"name"`
 }
 
-func (c *Coins) ToModel() *model.Coins {
-	coins := &model.Coins{
+func (c *Coins) ToModel() model.Coins {
+	coins := model.Coins{
 		ID:     c.ID,
 		Symbol: c.Symbol,
 		Name:   c.Name,

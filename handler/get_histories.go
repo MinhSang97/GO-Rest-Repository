@@ -49,6 +49,18 @@ func Get_Histories() func(*gin.Context) {
 			return
 		}
 
+		var num int
+		var unit string
+		fmt.Sscanf(requestGetHistories.Period, "%d%s", &num, &unit)
+		fmt.Println("num: ", num)
+		if num < 7 {
+			days := 1
+			fmt.Println("days", days)
+		} else if num < 14 {
+			days := 7
+			fmt.Println("days", days)
+		}
+
 		symbol := strings.ToLower(requestGetHistories.Symbol)
 		period := strings.ToUpper(requestGetHistories.Period)
 

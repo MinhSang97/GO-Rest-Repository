@@ -4,7 +4,6 @@ import (
 	"app/dbutil"
 	"app/model"
 	"app/repo/postgresSQL"
-	"context"
 )
 
 type coinUseCase struct {
@@ -19,6 +18,6 @@ func NewCoinUseCase() *coinUseCase {
 	}
 }
 
-func (uc *coinUseCase) InsertCoin(ctx context.Context, coins *model.Coins) error {
-	return uc.coinRepo.InsertCoin(ctx, coins)
+func (uc *coinUseCase) InsertCoin(coins []model.Coins) error {
+	return uc.coinRepo.InsertCoin(coins)
 }

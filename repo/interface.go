@@ -10,5 +10,5 @@ type HistoriesRepo interface {
 }
 
 type CoinRepo interface {
-	Coin(ctx context.Context, coins *model.Coins) error
+	Coin(coins *model.Coins) error
 }

@@ -19,7 +19,6 @@ func (c *Coins) ToJson() string {
 	bs, err := json.Marshal(c)
 	if err != nil {
 		log.Fatalln(err)
-
 	}
 	return string(bs)
 }
