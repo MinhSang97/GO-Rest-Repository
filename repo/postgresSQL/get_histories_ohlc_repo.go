@@ -21,7 +21,7 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 	RedisClient := redis.ConnectRedis()
 
 	switch period {
-	case "30M", "1H", "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "10H", "11H", "12H", "13H", "14H", "15H", "16H", "17H", "18H", "19H", "20H", "21H", "22H", "23H", "24H":
+	case "1D":
 		var ohlcData []model.OHLCData
 		err := s.db.Raw("SELECT * FROM ohlc_data WHERE timestamp = ? OR timestamp = ?", startDate, endDate).Error
 		if err != nil {
@@ -117,8 +117,19 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 
 		}
 		return ohldData, nil
-
-	case "2D", "3D", "4D", "5D", "6D", "7D":
+	case "7D":
+		return ohldData, fmt.Errorf("chưa hỗ trợ")
+	case "14D":
+		return ohldData, fmt.Errorf("chưa hỗ trợ")
+	case "30D":
+		return ohldData, fmt.Errorf("chưa hỗ trợ")
+	case "90D":
+		return ohldData, fmt.Errorf("chưa hỗ trợ")
+	case "180D":
+		return ohldData, fmt.Errorf("chưa hỗ trợ")
+	case "365D":
+		return ohldData, fmt.Errorf("chưa hỗ trợ")
+	case "MAX":
 		return ohldData, fmt.Errorf("chưa hỗ trợ")
 	default:
 		return ohldData, fmt.Errorf("chưa hỗ trợ")

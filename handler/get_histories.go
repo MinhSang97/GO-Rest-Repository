@@ -50,6 +50,8 @@ func Get_Histories() func(*gin.Context) {
 		}
 
 		symbol := strings.ToLower(requestGetHistories.Symbol)
+
+		// Kiểm tra điều kiện về Period
 		period := requestGetHistories.Period
 
 		var num int
@@ -65,161 +67,77 @@ func Get_Histories() func(*gin.Context) {
 		period = strings.ToUpper(requestGetHistories.Period)
 
 		//Trường hợp nhỏ hơn 14 day
-		b := 7 < num && num <= 14 && unit == "D"
+		day14 := 7 < num && num <= 14 && unit == "D"
 
 		//Trường hợp nhỏ hơn 30 day
-		cc := 14 < num && num <= 30 && unit == "D"
+		day30 := 14 < num && num <= 30 && unit == "D"
 
 		//Trường hợp nhỏ hơn 90 day
-		d := 30 < num && num <= 90 && unit == "D"
+		day90 := 30 < num && num <= 90 && unit == "D"
 
 		//Trường hợp nhỏ hơn 180 day
-		e := 90 < num && num <= 180 && unit == "D"
+		day180 := 90 < num && num <= 180 && unit == "D"
 
 		//Trường hợp nhỏ hơn 365 day
-		f := 180 < num && num <= 365 && unit == "D"
+		day365 := 180 < num && num <= 365 && unit == "D"
 
-		if num != 0 && num <= 7 && period == "30M" && unit == "H" {
-			uc := usecases.NewHistoriesUseCase()
-			// Trong hàm GetHistories
-			dataJSON, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			// Chuyển đổi dữ liệu JSON thành slice byte
-			jsonData, err := json.Marshal(dataJSON)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			// Chuyển đổi dữ liệu JSON thành mảng cấu trúc model.OHLCData
-			var ohldData []model.OHLCData
-			err = json.Unmarshal(jsonData, &ohldData)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			// Trả về dữ liệu đã chuyển đổi
-			c.JSON(http.StatusOK, gin.H{
-				"data": ohldData,
-			})
+		if num != 0 && num <= 7 && unit == "H" || period == "30M" {
+			period = "1D"
 		} else if num <= 7 && unit == "D" {
-
-		} else if b {
-
-		} else if cc {
-
-		} else if d {
-
-		} else if e {
-
-		} else if f {
-
+			period = "7D"
+		} else if day14 {
+			period = "14D"
+		} else if day30 {
+			period = "30D"
+		} else if day90 {
+			period = "90D"
+		} else if day180 {
+			period = "180D"
+		} else if day365 {
+			period = "365D"
 		} else if num == 0 && period == "MAX" {
-			uc := usecases.NewHistoriesUseCase()
-			// Trong hàm GetHistories
-			dataJSON, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			// Chuyển đổi dữ liệu JSON thành slice byte
-			jsonData, err := json.Marshal(dataJSON)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			// Chuyển đổi dữ liệu JSON thành mảng cấu trúc model.OHLCData
-			var ohldData []model.OHLCData
-			err = json.Unmarshal(jsonData, &ohldData)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			// Trả về dữ liệu đã chuyển đổi
-			c.JSON(http.StatusOK, gin.H{
-				"data": ohldData,
-			})
-		}
-
-		// Kiểm tra điều kiện về Period
-		switch requestGetHistories.Period {
-		case "30M", "1H", "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "10H", "11H", "12H", "13H", "14H", "15H", "16H", "17H", "18H", "19H", "20H", "21H", "22H", "23H", "24H":
-
-			uc := usecases.NewHistoriesUseCase()
-			// Trong hàm GetHistories
-			dataJSON, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			// Chuyển đổi dữ liệu JSON thành slice byte
-			jsonData, err := json.Marshal(dataJSON)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			// Chuyển đổi dữ liệu JSON thành mảng cấu trúc model.OHLCData
-			var ohldData []model.OHLCData
-			err = json.Unmarshal(jsonData, &ohldData)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			// Trả về dữ liệu đã chuyển đổi
-			c.JSON(http.StatusOK, gin.H{
-				"data": ohldData,
-			})
-
-		case "2D", "3D", "4D", "5D", "6D", "7D":
-
-			uc := usecases.NewHistoriesUseCase()
-
-			data, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"data": data,
-			})
-		default:
+			period = "MAX"
+		} else {
 			c.JSON(http.StatusBadRequest, payload.Response{
 				Error: errors.New("Invalid period").Error(),
 			})
 			return
 		}
+		fmt.Println(period)
+
+		uc := usecases.NewHistoriesUseCase()
+		// Trong hàm GetHistories
+		dataJSON, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Chuyển đổi dữ liệu JSON thành slice byte
+		jsonData, err := json.Marshal(dataJSON)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Chuyển đổi dữ liệu JSON thành mảng cấu trúc model.OHLCData
+		var ohldData []model.OHLCData
+		err = json.Unmarshal(jsonData, &ohldData)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Trả về dữ liệu đã chuyển đổi
+		c.JSON(http.StatusOK, gin.H{
+			"data": ohldData,
+		})
 
 	}
 }
