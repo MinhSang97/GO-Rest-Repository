@@ -1,9 +1,11 @@
 package main
 
 import (
+	"app/model"
 	"app/payload"
 	"encoding/json"
 	"fmt"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"io/ioutil"
 	"log"
@@ -42,54 +44,10 @@ func main() {
 	//log.Println("Data saved successfully")
 }
 
-// Hàm để tính toán khoảng thời gian dựa trên giá trị của Period
-//func addTimeForPeriod(period string) string {
-//	// Thêm đơn vị "h" vào chuỗi Period trước khi chuyển đổi
-//
-//	var num int
-//	var unit string
-//	fmt.Sscanf(period, "%d%s", &num, &unit)
-//	fmt.Println(num)
-//
-//	periodWithUnit := period + "h"
-//	fmt.Println(periodWithUnit)
-//
-//	return unit
-//}
-
-func fetchData() ([]OHLCData, error) {
+func fetchData() ([]model.OHLCDataSaveData, error) {
 
 	request := payload.RequestGetHistories{}
-	//loc, _ := time.LoadLocation("Asia/Ho_Chi_Minh") // Lấy múi giờ của Việt Nam
-	//startDate, err := time.ParseInLocation("02-01-2006 15:04:05", request.StartDate, loc)
-	//
-	//endDate, err := time.ParseInLocation("02-01-2006 15:04:05", request.EndDate, loc)
 
-	//duration := endDate.Sub(startDate)
-	//days := int(duration.Hours() / 24)
-	//if duration.Hours()%24 > 0 {
-	//	days++ // Làm tròn lên nếu phần thập phân lớn hơn 0
-	//}
-
-	//duration := endDate.Sub(startDate)
-	//days := int(duration.Hours() / 24)
-	//hours := int(duration.Hours()) % 24 // Lấy phần dư của số giờ
-
-	// Nếu số giờ lớn hơn 0, làm tròn lên số ngày
-	//if hours > 0 {
-	//	days++
-	//}
-	//day := days
-	//fmt.Println("days: ", days)
-
-	//switch request.Period {
-	//case "30M", "1H", "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "10H", "11H", "12H", "13H", "14H", "15H", "16H", "17H", "18H", "19H", "20H", "21H", "22H", "23H", "24H":
-	//day := 1
-	//case "2D", "3D", "4D", "5D", "6D", "7D":
-	//
-	//default:
-	//
-	//}
 	period := request.Period
 	period = "MAX"
 	var num int
@@ -116,6 +74,18 @@ func fetchData() ([]OHLCData, error) {
 
 	//Trường hợp nhỏ hơn 365 day
 	f := 180 < num && num <= 365 && unit == "D"
+	dsn := "host=localhost user=admin password=123456 dbname=golang port=5432 sslmode=disable"
+
+	var err error
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	instance = db
+	log.Println("Connected to the database")
+
+	id := request.Symbol
+	result := db.Raw("SELECT * FROM coins where symbol = ?", id).First()
 
 	if num != 0 && num <= 7 && period == "30M" && unit == "H" {
 		days = 1
@@ -160,15 +130,15 @@ func fetchData() ([]OHLCData, error) {
 		return nil, err
 	}
 
-	var ohlcData []OHLCData
+	var ohlcData []model.OHLCDataSaveData
 	for _, d := range data {
 		// Ensure each element is an array of length 5
 		if len(d) != 5 {
 			return nil, fmt.Errorf("unexpected data format")
 		}
 
-		ohlc := OHLCData{
-			ID:        "bitcoin",
+		ohlc := model.OHLCDataSaveData{
+			ID:        string(result),
 			Timestamp: int64(d[0].(float64) / 1000), // Convert milliseconds to seconds
 			Open:      d[1].(float64),
 			High:      d[2].(float64),
@@ -177,12 +147,13 @@ func fetchData() ([]OHLCData, error) {
 		}
 		ohlcData = append(ohlcData, ohlc)
 	}
+
 	fmt.Println(ohlcData)
 	return ohlcData, nil
 
 }
 
-func calculateChange(data *[]OHLCData) {
+func calculateChange(data *[]model.OHLCDataSaveData) {
 	for i := range *data {
 		if i > 0 {
 			previousClose := (*data)[i-1].Close
@@ -193,11 +164,11 @@ func calculateChange(data *[]OHLCData) {
 	}
 }
 
-func saveData(data *[]OHLCData) error {
+func saveData(data *[]model.OHLCDataSaveData) error {
 	for _, d := range *data {
 		// Check if the record already exists
 		var count int64
-		instance.Model(&OHLCData{}).Where("id = ? AND timestamp = ?", d.ID, d.Timestamp).Count(&count)
+		instance.Model(&model.OHLCDataSaveData{}).Where("id = ? AND timestamp = ?", d.ID, d.Timestamp).Count(&count)
 		if count == 0 {
 			// If the record does not exist, create a new one
 			result := instance.Create(&d)
