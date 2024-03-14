@@ -16,17 +16,19 @@ type ohldDataRepository struct {
 	db *gorm.DB
 }
 
+var RedisClient = redis.ConnectRedis()
+
 func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, endDate int64, period, symbol string) ([]model.OHLCData, error) {
 	var ohldData []model.OHLCData
-	RedisClient := redis.ConnectRedis()
 
 	switch period {
 	case "1D":
 		var ohlcData []model.OHLCData
-		err := s.db.Raw("SELECT * FROM ohlc_data WHERE timestamp = ? OR timestamp = ?", startDate, endDate).Error
-		if err != nil {
-			log.Println("Failed to execute SQL query:", err)
-			return ohlcData, fmt.Errorf("Failed to execute SQL query: %w", err)
+		var count int
+		err := s.db.Raw("SELECT * FROM ohlc_data_1day WHERE timestamp = ? OR timestamp = ?", startDate, endDate).Error
+		if err != nil || count != 2 {
+			log.Println("End Time not available. Need call API get data")
+			return ohlcData, fmt.Errorf("End Time not available. Need call API get data")
 
 		} else {
 			cacheKey := fmt.Sprintf("ohlc_data:%s:%d:%d", symbol, startDate, endDate)
@@ -45,7 +47,7 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 			}
 
 			// Truy vấn dữ liệu từ PostgreSQL
-			rows, err := s.db.Raw("SELECT o.timestamp, o.high, o.low, o.open, o.close, o.change FROM coins c RIGHT JOIN ohlc_data o ON c.id = o.id WHERE c.symbol = ? AND o.timestamp >= ? AND o.timestamp <= ?", symbol, startDate, endDate).Rows()
+			rows, err := s.db.Raw("SELECT o.timestamp, o.high, o.low, o.open, o.close, o.change FROM coins c RIGHT JOIN ohlc_data_1day o ON c.id = o.id WHERE c.symbol = ? AND o.timestamp >= ? AND o.timestamp <= ?", symbol, startDate, endDate).Rows()
 			if err != nil {
 				log.Println("Failed to execute SQL query:", err)
 				return ohldData, fmt.Errorf("Failed to execute SQL query: %w", err)

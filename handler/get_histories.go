@@ -103,7 +103,6 @@ func Get_Histories() func(*gin.Context) {
 			})
 			return
 		}
-		fmt.Println(period)
 
 		uc := usecases.NewHistoriesUseCase()
 		// Trong hàm GetHistories

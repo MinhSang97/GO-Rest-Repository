@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/redis/go-redis/v9"
@@ -18,11 +17,11 @@ func ConnectRedis() *redis.Client {
 	})
 
 	// Kiểm tra kết nối đến Redis
-	pong, err := RedisClient.Ping(context.Background()).Result()
+	_, err := RedisClient.Ping(context.Background()).Result()
 	if err != nil {
 		log.Fatal("Failed to connect to Redis:", err)
 	}
-	fmt.Println("Connected to Redis:", pong)
+	//fmt.Println("Connected to Redis:", pong)
 	return RedisClient
 
 }
