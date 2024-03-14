@@ -49,20 +49,117 @@ func Get_Histories() func(*gin.Context) {
 			return
 		}
 
+		symbol := strings.ToLower(requestGetHistories.Symbol)
+		period := requestGetHistories.Period
+
 		var num int
 		var unit string
-		fmt.Sscanf(requestGetHistories.Period, "%d%s", &num, &unit)
 
-		if num < 7 {
-			days := 1
-			fmt.Println("days", days)
-		} else if num < 14 {
-			days := 7
-			fmt.Println("days", days)
+		fmt.Sscanf(period, "%d%s", &num, &unit)
+
+		if period == "MAX" {
+			unit = "MAX"
 		}
+		fmt.Sscanf(period, "%d%s", &num, &unit)
 
-		symbol := strings.ToLower(requestGetHistories.Symbol)
-		period := strings.ToUpper(requestGetHistories.Period)
+		period = strings.ToUpper(requestGetHistories.Period)
+
+		//Trường hợp nhỏ hơn 14 day
+		b := 7 < num && num <= 14 && unit == "D"
+
+		//Trường hợp nhỏ hơn 30 day
+		cc := 14 < num && num <= 30 && unit == "D"
+
+		//Trường hợp nhỏ hơn 90 day
+		d := 30 < num && num <= 90 && unit == "D"
+
+		//Trường hợp nhỏ hơn 180 day
+		e := 90 < num && num <= 180 && unit == "D"
+
+		//Trường hợp nhỏ hơn 365 day
+		f := 180 < num && num <= 365 && unit == "D"
+
+		if num != 0 && num <= 7 && period == "30M" && unit == "H" {
+			uc := usecases.NewHistoriesUseCase()
+			// Trong hàm GetHistories
+			dataJSON, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			// Chuyển đổi dữ liệu JSON thành slice byte
+			jsonData, err := json.Marshal(dataJSON)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			// Chuyển đổi dữ liệu JSON thành mảng cấu trúc model.OHLCData
+			var ohldData []model.OHLCData
+			err = json.Unmarshal(jsonData, &ohldData)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			// Trả về dữ liệu đã chuyển đổi
+			c.JSON(http.StatusOK, gin.H{
+				"data": ohldData,
+			})
+		} else if num <= 7 && unit == "D" {
+
+		} else if b {
+
+		} else if cc {
+
+		} else if d {
+
+		} else if e {
+
+		} else if f {
+
+		} else if num == 0 && period == "MAX" {
+			uc := usecases.NewHistoriesUseCase()
+			// Trong hàm GetHistories
+			dataJSON, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			// Chuyển đổi dữ liệu JSON thành slice byte
+			jsonData, err := json.Marshal(dataJSON)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			// Chuyển đổi dữ liệu JSON thành mảng cấu trúc model.OHLCData
+			var ohldData []model.OHLCData
+			err = json.Unmarshal(jsonData, &ohldData)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			// Trả về dữ liệu đã chuyển đổi
+			c.JSON(http.StatusOK, gin.H{
+				"data": ohldData,
+			})
+		}
 
 		// Kiểm tra điều kiện về Period
 		switch requestGetHistories.Period {
