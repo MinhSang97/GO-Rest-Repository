@@ -52,7 +52,7 @@ func Get_Histories() func(*gin.Context) {
 		var num int
 		var unit string
 		fmt.Sscanf(requestGetHistories.Period, "%d%s", &num, &unit)
-		fmt.Println("num: ", num)
+
 		if num < 7 {
 			days := 1
 			fmt.Println("days", days)

@@ -2,11 +2,14 @@ package postgresSQL
 
 import (
 	"app/model"
+	"app/redis"
 	"app/repo"
 	"context"
+	"encoding/json"
 	"fmt"
 	"gorm.io/gorm"
 	"log"
+	"time"
 )
 
 type ohldDataRepository struct {
@@ -15,6 +18,7 @@ type ohldDataRepository struct {
 
 func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, endDate int64, period, symbol string) ([]model.OHLCData, error) {
 	var ohldData []model.OHLCData
+	RedisClient := redis.ConnectRedis()
 
 	switch period {
 	case "30M", "1H", "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "10H", "11H", "12H", "13H", "14H", "15H", "16H", "17H", "18H", "19H", "20H", "21H", "22H", "23H", "24H":
@@ -25,6 +29,22 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 			return ohlcData, fmt.Errorf("Failed to execute SQL query: %w", err)
 
 		} else {
+			cacheKey := fmt.Sprintf("ohlc_data:%s:%d:%d", symbol, startDate, endDate)
+
+			// Kiểm tra cache trong Redis
+			cachedOhldDataJSON, err := RedisClient.Get(ctx, cacheKey).Result()
+			if err == nil {
+				var cachedOhldData []model.OHLCData
+				err := json.Unmarshal([]byte(cachedOhldDataJSON), &cachedOhldData)
+				if err != nil {
+					log.Println("Failed to unmarshal data from Redis:", err)
+					return ohldData, fmt.Errorf("Failed to unmarshal data from Redis: %w", err)
+				}
+				log.Println("Data fetched from Redis")
+				return cachedOhldData, nil
+			}
+
+			// Truy vấn dữ liệu từ PostgreSQL
 			rows, err := s.db.Raw("SELECT o.timestamp, o.high, o.low, o.open, o.close, o.change FROM coins c RIGHT JOIN ohlc_data o ON c.id = o.id WHERE c.symbol = ? AND o.timestamp >= ? AND o.timestamp <= ?", symbol, startDate, endDate).Rows()
 			if err != nil {
 				log.Println("Failed to execute SQL query:", err)
@@ -38,12 +58,6 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 				rows.Scan(&timestamp, &high, &low, &open, &close, &change)
 				ohldData = append(ohldData, model.OHLCData{Timestamp: timestamp, High: high, Low: low, Open: open, Close: close, Change: change})
 			}
-
-			if len(ohldData) == 0 {
-				log.Println("Data not found in PostgreSQL")
-				return ohldData, fmt.Errorf("Data not found in PostgreSQL")
-			}
-
 			var highestPrice, lowestPrice, firstPrice, lastPrice float64
 			var startTime int64
 
@@ -80,6 +94,27 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 			datax := []model.OHLCData{}
 
 			ohldData = append(datax, data)
+
+			if len(ohldData) == 0 {
+				log.Println("Data not found in PostgreSQL")
+				return ohldData, fmt.Errorf("Data not found in PostgreSQL")
+			}
+
+			// Cache dữ liệu vào Redis
+			cacheDuration := time.Hour
+			ohldDataJSON, err := json.Marshal(ohldData)
+			if err != nil {
+				log.Println("Failed to marshal data for Redis cache:", err)
+				return ohldData, fmt.Errorf("Failed to marshal data for Redis cache: %w", err)
+			}
+			err = RedisClient.Set(ctx, cacheKey, ohldDataJSON, cacheDuration).Err()
+			if err != nil {
+				log.Println("Failed to cache data in Redis:", err)
+				// Không trả về lỗi ở đây vì dữ liệu đã được trả về thành công từ PostgreSQL
+			}
+
+			log.Println("Data queried from PostgreSQL and cached in Redis")
+
 		}
 		return ohldData, nil
 
