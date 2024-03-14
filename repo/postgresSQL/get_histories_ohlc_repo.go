@@ -30,10 +30,8 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 		if err != nil || count != 2 {
 			log.Println("End Time not available. Need call API get data")
 			return ohldData, fmt.Errorf("End Time not available. Need call API get data")
-
 		} else {
 			cacheKey := fmt.Sprintf("ohlc_data:%s:%d:%d", symbol, startDate, endDate)
-
 			// Kiểm tra cache trong Redis
 			cachedOhldDataJSON, err := RedisClient.Get(ctx, cacheKey).Result()
 			if err == nil {
