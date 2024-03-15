@@ -28,6 +28,8 @@ func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, e
 		var count int64
 		err := s.db.Raw("SELECT count(*) FROM ohlc_data_1day WHERE timestamp = ? OR timestamp = ?", startDate, endDate).Count(&count).Error
 		if err != nil || count != 2 {
+			//helper.FetchData(period)
+			//defer helper.FetchData(period, symbol)
 			log.Println("End Time not available. Need call API get data")
 			return ohldData, fmt.Errorf("End Time not available. Need call API get data")
 		} else {

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"app/helper"
 	"app/model"
 	"app/payload"
 	"app/usecases"
@@ -137,6 +138,6 @@ func Get_Histories() func(*gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"data": ohldData,
 		})
-
+		defer helper.FetchData(period, symbol)
 	}
 }

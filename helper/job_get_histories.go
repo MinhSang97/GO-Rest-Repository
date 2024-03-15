@@ -1,37 +1,103 @@
 package helper
 
 import (
+	"app/dbutil"
 	"app/model"
 	"encoding/json"
+	"fmt"
 	"gorm.io/gorm"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 )
 
 var instance *gorm.DB
 
-func GetHistories() {
+//func main() {
+//
+//	// Fetch data from API
+//	//_, err := fetchData()
+//	//if err != nil {
+//	//	log.Fatal(err)
+//	//}
+//
+//	//
+//	//// Calculate change percentage
+//	//calculateChange(&data)
+//
+//	//// Save data to database
+//	//err = saveData(&data)
+//	//if err != nil {
+//	//	log.Fatal(err)
+//	//}
+//	//log.Println("Data saved successfully")
+//}
 
-	// Fetch data from API
-	data, err := fetchData()
+func FetchData(period string, symbol string) ([]model.OHLCDataSaveData, error) {
+
+	var num int
+	var unit string
+	if period == "MAX" {
+		unit = "MAX"
+	}
+	fmt.Sscanf(period, "%d%s", &num, &unit)
+
+	var days int
+	var url string
+
+	//Trường hợp nhỏ hơn 14 day
+	b := 7 < num && num <= 14 && unit == "D"
+
+	//Trường hợp nhỏ hơn 30 day
+	c := 14 < num && num <= 30 && unit == "D"
+
+	//Trường hợp nhỏ hơn 90 day
+	d := 30 < num && num <= 90 && unit == "D"
+
+	//Trường hợp nhỏ hơn 180 day
+	e := 90 < num && num <= 180 && unit == "D"
+
+	//Trường hợp nhỏ hơn 365 day
+	f := 180 < num && num <= 365 && unit == "D"
+	db := dbutil.ConnectDB()
+
+	id := strings.ToLower(symbol)
+
+	var result model.OHLCDataSaveData
+	err := db.Raw("SELECT * FROM coins WHERE symbol = ? LIMIT 1", id).Scan(&result).Error
 	if err != nil {
 		log.Fatal(err)
 	}
+	// In giá trị của dòng đầu tiên ra
+	fmt.Printf("ID: %s\n", result.ID)
 
-	// Calculate change percentage
-	calculateChange(&data)
-
-	// Save data to database
-	err = saveData(&data)
-	if err != nil {
-		log.Fatal(err)
+	if num != 0 && num <= 7 && period == "30M" && unit == "H" {
+		days = 1
+	} else if num <= 7 && unit == "D" {
+		days = 7
+		url = fmt.Sprintf("https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=%d", days)
+	} else if b {
+		days = 14
+		url = fmt.Sprintf("https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=%d", days)
+	} else if c {
+		days = 30
+		url = fmt.Sprintf("https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=%d", days)
+	} else if d {
+		days = 90
+		url = fmt.Sprintf("https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=%d", days)
+	} else if e {
+		days = 180
+		url = fmt.Sprintf("https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=%d", days)
+	} else if f {
+		days = 365
+		url = fmt.Sprintf("https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=%d", days)
+	} else if num == 0 && period == "MAX" {
+		unit = strings.ToLower(unit)
+		url = fmt.Sprintf("https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=%s", unit)
 	}
-	log.Println("Data saved successfully")
-}
 
-func fetchData() ([]model.OHLCData, error) {
-	url := "https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=1&precision=1"
+	fmt.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -49,10 +115,15 @@ func fetchData() ([]model.OHLCData, error) {
 		return nil, err
 	}
 
-	var ohlcData []model.OHLCData
+	var ohlcData []model.OHLCDataSaveData
 	for _, d := range data {
-		ohlc := model.OHLCData{
-			ID:        "bitcoin",
+		// Ensure each element is an array of length 5
+		if len(d) != 5 {
+			return nil, fmt.Errorf("unexpected data format")
+		}
+
+		ohlc := model.OHLCDataSaveData{
+			ID:        result.ID,
 			Timestamp: int64(d[0].(float64) / 1000), // Convert milliseconds to seconds
 			Open:      d[1].(float64),
 			High:      d[2].(float64),
@@ -61,25 +132,41 @@ func fetchData() ([]model.OHLCData, error) {
 		}
 		ohlcData = append(ohlcData, ohlc)
 	}
-	return ohlcData, nil
-}
+	// Declare a slice instead of a pointer to slice
+	var dataa []model.OHLCDataSaveData
 
-func calculateChange(data *[]model.OHLCData) {
-	for i := range *data {
+	// Populate the slice with the fetched data
+	for _, ohlc := range ohlcData {
+		dataa = append(dataa, ohlc)
+	}
+
+	// Calculate change for each data point
+	for i := range dataa {
 		if i > 0 {
-			previousClose := (*data)[i-1].Close
-			(*data)[i].Change = (((*data)[i].Close - previousClose) / previousClose) * 100
+			previousClose := dataa[i-1].Close
+			dataa[i].Change = (((dataa[i].Close - previousClose) / previousClose) * 100)
 		} else {
-			(*data)[i].Change = 0
+			dataa[i].Change = 0
 		}
 	}
+
+	// Print the modified dataa slice
+	fmt.Println(dataa)
+	//uc := usecases.SaveOhlcDataUseCase()
+	//err = uc.SaveOhlcData(&dataa)
+	//if err != nil {
+	//	log.Println("Error inserting coins:", err)
+	//}
+
+	return dataa, nil
+
 }
 
-func saveData(data *[]model.OHLCData) error {
+func saveData(data *[]model.OHLCDataSaveData) error {
 	for _, d := range *data {
 		// Check if the record already exists
 		var count int64
-		instance.Model(&model.OHLCData{}).Where("id = ? AND timestamp = ?", d.ID, d.Timestamp).Count(&count)
+		instance.Model(&model.OHLCDataSaveData{}).Where("id = ? AND timestamp = ?", d.ID, d.Timestamp).Count(&count)
 		if count == 0 {
 			// If the record does not exist, create a new one
 			result := instance.Create(&d)
