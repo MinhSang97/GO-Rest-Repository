@@ -1,11 +1,11 @@
 package main
 
 import (
+	"app/dbutil"
 	"app/model"
 	"app/payload"
 	"encoding/json"
 	"fmt"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"io/ioutil"
 	"log"
@@ -28,13 +28,14 @@ var instance *gorm.DB
 func main() {
 
 	// Fetch data from API
-	data, err := fetchData()
+	_, err := fetchData()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Calculate change percentage
-	calculateChange(&data)
+	//
+	//// Calculate change percentage
+	//calculateChange(&data)
 
 	//// Save data to database
 	//err = saveData(&data)
@@ -49,7 +50,7 @@ func fetchData() ([]model.OHLCDataSaveData, error) {
 	request := payload.RequestGetHistories{}
 
 	period := request.Period
-	period = "MAX"
+	period = "1D"
 	var num int
 	var unit string
 	if period == "MAX" {
@@ -74,18 +75,18 @@ func fetchData() ([]model.OHLCDataSaveData, error) {
 
 	//Trường hợp nhỏ hơn 365 day
 	f := 180 < num && num <= 365 && unit == "D"
-	dsn := "host=localhost user=admin password=123456 dbname=golang port=5432 sslmode=disable"
+	db := dbutil.ConnectDB()
 
-	var err error
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	//id := strings.ToLower(request.Symbol)
+	id := "btc"
+
+	var result model.OHLCDataSaveData
+	err := db.Raw("SELECT * FROM coins WHERE symbol = ? LIMIT 1", id).Scan(&result).Error
 	if err != nil {
 		log.Fatal(err)
 	}
-	instance = db
-	log.Println("Connected to the database")
-
-	id := request.Symbol
-	result := db.Raw("SELECT * FROM coins where symbol = ?", id).First()
+	// In giá trị của dòng đầu tiên ra
+	fmt.Printf("ID: %s\n", result.ID)
 
 	if num != 0 && num <= 7 && period == "30M" && unit == "H" {
 		days = 1
@@ -138,7 +139,7 @@ func fetchData() ([]model.OHLCDataSaveData, error) {
 		}
 
 		ohlc := model.OHLCDataSaveData{
-			ID:        string(result),
+			ID:        result.ID,
 			Timestamp: int64(d[0].(float64) / 1000), // Convert milliseconds to seconds
 			Open:      d[1].(float64),
 			High:      d[2].(float64),
@@ -147,21 +148,28 @@ func fetchData() ([]model.OHLCDataSaveData, error) {
 		}
 		ohlcData = append(ohlcData, ohlc)
 	}
+	// Declare a slice instead of a pointer to slice
+	var dataa []model.OHLCDataSaveData
 
-	fmt.Println(ohlcData)
-	return ohlcData, nil
+	// Populate the slice with the fetched data
+	for _, ohlc := range ohlcData {
+		dataa = append(dataa, ohlc)
+	}
 
-}
-
-func calculateChange(data *[]model.OHLCDataSaveData) {
-	for i := range *data {
+	// Calculate change for each data point
+	for i := range dataa {
 		if i > 0 {
-			previousClose := (*data)[i-1].Close
-			(*data)[i].Change = (((*data)[i].Close - previousClose) / previousClose) * 100
+			previousClose := dataa[i-1].Close
+			dataa[i].Change = (((dataa[i].Close - previousClose) / previousClose) * 100)
 		} else {
-			(*data)[i].Change = 0
+			dataa[i].Change = 0
 		}
 	}
+
+	// Print the modified dataa slice
+	fmt.Println(dataa)
+	return dataa, nil
+
 }
 
 func saveData(data *[]model.OHLCDataSaveData) error {
