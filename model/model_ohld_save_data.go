@@ -16,7 +16,7 @@ type OHLCDataSaveData struct {
 }
 
 func (c *OHLCDataSaveData) TableName() string {
-	return "GetHistories"
+	return "OHLCDataSaveData"
 }
 
 func (c *OHLCDataSaveData) ToJson() string {

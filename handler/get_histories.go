@@ -63,7 +63,6 @@ func Get_Histories() func(*gin.Context) {
 		if period == "MAX" {
 			unit = "MAX"
 		}
-		fmt.Sscanf(period, "%d%s", &num, &unit)
 
 		period = strings.ToUpper(requestGetHistories.Period)
 
@@ -82,7 +81,7 @@ func Get_Histories() func(*gin.Context) {
 		//Trường hợp nhỏ hơn 365 day
 		day365 := 180 < num && num <= 365 && unit == "D"
 
-		if num != 0 && num <= 7 && unit == "H" || period == "30M" {
+		if num == 1 && num <= 6 || unit == "H" || period == "30M" {
 			period = "1D"
 		} else if num <= 7 && unit == "D" {
 			period = "7D"
@@ -105,10 +104,49 @@ func Get_Histories() func(*gin.Context) {
 			return
 		}
 
+		//uc := usecases.NewHistoriesUseCase()
+		//// Trong hàm GetHistories
+		//dataJSON, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
+		//if err != nil {
+		//	c.JSON(http.StatusInternalServerError, gin.H{
+		//		"error": err.Error(),
+		//	})
+		//	return
+		//}
+		//
+		//// Chuyển đổi dữ liệu JSON thành slice byte
+		//jsonData, err := json.Marshal(dataJSON)
+		//if err != nil {
+		//	c.JSON(http.StatusInternalServerError, gin.H{
+		//		"error": err.Error(),
+		//	})
+		//	return
+		//}
+		//
+		//// Chuyển đổi dữ liệu JSON thành mảng cấu trúc model.OHLCData
+		//var ohldData []model.OHLCData
+		//err = json.Unmarshal(jsonData, &ohldData)
+		//if err != nil {
+		//	c.JSON(http.StatusInternalServerError, gin.H{
+		//		"error": err.Error(),
+		//	})
+		//	return
+		//}
+		//
+		//// Trả về dữ liệu đã chuyển đổi
+		//c.JSON(http.StatusOK, gin.H{
+		//	"data": ohldData,
+		//})
+		//defer helper.FetchData(period, symbol)
+
 		uc := usecases.NewHistoriesUseCase()
 		// Trong hàm GetHistories
 		dataJSON, err := uc.GetHistories(c.Request.Context(), startDate, endDate, period, symbol)
 		if err != nil {
+			if err.Error() == "End Time not available. Need call API get data" {
+				// Gọi hàm defer ở đây
+				defer helper.FetchData(period, symbol)
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
@@ -138,6 +176,5 @@ func Get_Histories() func(*gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"data": ohldData,
 		})
-		defer helper.FetchData(period, symbol)
 	}
 }

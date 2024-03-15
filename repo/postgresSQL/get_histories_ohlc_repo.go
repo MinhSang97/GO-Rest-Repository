@@ -20,7 +20,7 @@ var RedisClient = redis.ConnectRedis()
 
 func (s ohldDataRepository) GetHistories(ctx context.Context, startDate int64, endDate int64, period, symbol string) ([]model.OHLCData, error) {
 	var ohldData []model.OHLCData
-	fmt.Println(endDate)
+	//fmt.Println(endDate)
 
 	switch period {
 	case "1D":

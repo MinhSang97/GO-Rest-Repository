@@ -3,38 +3,17 @@ package helper
 import (
 	"app/dbutil"
 	"app/model"
+	"app/payload"
+	"app/usecases"
 	"encoding/json"
 	"fmt"
-	"gorm.io/gorm"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 )
 
-var instance *gorm.DB
-
-//func main() {
-//
-//	// Fetch data from API
-//	//_, err := fetchData()
-//	//if err != nil {
-//	//	log.Fatal(err)
-//	//}
-//
-//	//
-//	//// Calculate change percentage
-//	//calculateChange(&data)
-//
-//	//// Save data to database
-//	//err = saveData(&data)
-//	//if err != nil {
-//	//	log.Fatal(err)
-//	//}
-//	//log.Println("Data saved successfully")
-//}
-
-func FetchData(period string, symbol string) ([]model.OHLCDataSaveData, error) {
+func FetchData(period string, symbol string) {
 
 	var num int
 	var unit string
@@ -42,6 +21,7 @@ func FetchData(period string, symbol string) ([]model.OHLCDataSaveData, error) {
 		unit = "MAX"
 	}
 	fmt.Sscanf(period, "%d%s", &num, &unit)
+	fmt.Println("period: ", period)
 
 	var days int
 	var url string
@@ -64,16 +44,22 @@ func FetchData(period string, symbol string) ([]model.OHLCDataSaveData, error) {
 
 	id := strings.ToLower(symbol)
 
+	request := payload.RequestGetHistories{}
+
+	period = request.Period
+	fmt.Println("period: ", period)
+
 	var result model.OHLCDataSaveData
 	err := db.Raw("SELECT * FROM coins WHERE symbol = ? LIMIT 1", id).Scan(&result).Error
 	if err != nil {
 		log.Fatal(err)
 	}
 	// In giá trị của dòng đầu tiên ra
-	fmt.Printf("ID: %s\n", result.ID)
+	//fmt.Printf("ID: %s\n", result.ID)
 
-	if num != 0 && num <= 7 && period == "30M" && unit == "H" {
+	if num == 1 && num <= 6 || unit == "H" || period == "30M" {
 		days = 1
+		url = fmt.Sprintf("https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=%d", days)
 	} else if num <= 7 && unit == "D" {
 		days = 7
 		url = fmt.Sprintf("https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=%d", days)
@@ -100,26 +86,26 @@ func FetchData(period string, symbol string) ([]model.OHLCDataSaveData, error) {
 	fmt.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		log.Println("Error get url:", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		log.Println("Error get body:", err)
 	}
 
 	var data [][]interface{}
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		return nil, err
+		log.Println("Error :", err)
 	}
 
 	var ohlcData []model.OHLCDataSaveData
 	for _, d := range data {
 		// Ensure each element is an array of length 5
 		if len(d) != 5 {
-			return nil, fmt.Errorf("unexpected data format")
+			log.Println("Error data:", err)
 		}
 
 		ohlc := model.OHLCDataSaveData{
@@ -151,32 +137,11 @@ func FetchData(period string, symbol string) ([]model.OHLCDataSaveData, error) {
 	}
 
 	// Print the modified dataa slice
-	fmt.Println(dataa)
-	//uc := usecases.SaveOhlcDataUseCase()
-	//err = uc.SaveOhlcData(&dataa)
-	//if err != nil {
-	//	log.Println("Error inserting coins:", err)
-	//}
+	//fmt.Println(dataa)
 
-	return dataa, nil
-
-}
-
-func saveData(data *[]model.OHLCDataSaveData) error {
-	for _, d := range *data {
-		// Check if the record already exists
-		var count int64
-		instance.Model(&model.OHLCDataSaveData{}).Where("id = ? AND timestamp = ?", d.ID, d.Timestamp).Count(&count)
-		if count == 0 {
-			// If the record does not exist, create a new one
-			result := instance.Create(&d)
-			if result.Error != nil {
-				return result.Error
-			}
-		} else {
-			// If the record exists, skip
-			log.Printf("Record with id '%s' and timestamp '%d' already exists. Skipping...", d.ID, d.Timestamp)
-		}
+	uc := usecases.SaveOhlcDataUseCase()
+	if err := uc.SaveOhlcData(dataa); err != nil {
+		log.Println("Error inserting coins:", err)
 	}
-	return nil
+
 }

@@ -13,8 +13,8 @@ type CoinRepo interface {
 	Coin(coins *model.Coins) error
 }
 
-//type OhlcSaveRepo interface {
-//	SaveOhlcData(saveOhlcData *model.OHLCDataSaveData) ([]model.OHLCDataSaveData, error)
-//}
+type OhlcSaveRepo interface {
+	SaveOhlcData(saveOhlcData *model.OHLCDataSaveData) error
+}
 
 //saveOhlcData *model.OHLCDataSaveData
